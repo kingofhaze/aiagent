@@ -1,31 +1,47 @@
-import os, sys
-from dotenv import load_dotenv
+import sys
+import os
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
 
-load_dotenv()
-api_key = os.environ.get("GEMINI_API_KEY")
+def main():
+    load_dotenv()
 
-client = genai.Client(api_key=api_key)
+    verbose = "--verbose" in sys.argv
+    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
 
-prompt = sys.argv[1] if len(sys.argv) > 1 else None
-if not prompt:
-    print("Usage: python main.py <prompt>")
-    sys.exit(1)
+    if not args:
+        print("AI Code Assistant")
+        print('\nUsage: python main.py "your prompt here" [--verbose]')
+        print('Example: python main.py "How do I build a calculator app?"')
+        sys.exit(1)
 
-messages = [
-    types.Content(role="user", parts=[types.Part(text=prompt)]),
-]
+    api_key = os.environ.get("GEMINI_API_KEY")
+    client = genai.Client(api_key=api_key)
 
-response = client.models.generate_content(
-    model="gemini-2.0-flash-001",
-    contents=messages,
-)
+    user_prompt = " ".join(args)
 
-print(f"{response.text}")
+    if verbose:
+        print(f"User prompt: {user_prompt}\n")
 
-if sys.argv[2:] == ["--verbose"]:
-    print(f"User prompt: {prompt}")
-    print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-    print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+    messages = [
+        types.Content(role="user", parts=[types.Part(text=user_prompt)]),
+    ]
 
+    generate_content(client, messages, verbose)
+
+
+def generate_content(client, messages, verbose):
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001",
+        contents=messages,
+    )
+    if verbose:
+        print("Prompt tokens:", response.usage_metadata.prompt_token_count)
+        print("Response tokens:", response.usage_metadata.candidates_token_count)
+    print("Response:")
+    print(response.text)
+
+
+if __name__ == "__main__":
+    main()
